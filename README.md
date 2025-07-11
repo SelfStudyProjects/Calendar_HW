@@ -10,7 +10,6 @@
 - FullCalendar 기반 달력에서 드래그 앤 드롭 일정 생성 및 수정  
 - 이벤트에 비용(Cost) 필드 추가 및 비용 종류별 관리  
 - 부서별, 비용 종류별 매트릭스 타입 비용 집계 보고서 제공  
-- 사용자 권한에 따른 데이터 접근 및 수정 권한 제어
 
 ## 개발 환경  
 - Salesforce Lightning Web Component (LWC)  
