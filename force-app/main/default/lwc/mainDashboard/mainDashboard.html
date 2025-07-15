@@ -1,0 +1,47 @@
+<template>
+    <lightning-card title="Salesman's Calendar Dashboard" icon-name="standard:dashboard">
+        <div class="slds-p-around_medium">
+            <!-- 탭 메뉴 영역 -->
+            <lightning-tabset variant="scoped">
+                <lightning-tab label="Accounts" value="accounts">
+                    <div class="slds-p-around_medium">
+                        <!-- Account 리스트 컴포넌트가 들어갈 자리 -->
+                        <c-account-list></c-account-list>
+                    </div>
+                </lightning-tab>
+                <lightning-tab label="Contacts" value="contacts">
+                    <div class="slds-p-around_medium">
+                        <!-- Contact 리스트 컴포넌트가 들어갈 자리 -->
+                        <c-contact-list></c-contact-list>
+                    </div>
+                </lightning-tab>
+                <lightning-tab label="Opportunities" value="opportunities">
+                    <div class="slds-p-around_medium">
+                        <!-- Opportunity 리스트 컴포넌트가 들어갈 자리 -->
+                        <c-opportunity-list></c-opportunity-list>
+                    </div>
+                </lightning-tab>
+            </lightning-tabset>
+
+            <!-- Personal Activity 달력 영역 -->
+            <div class="slds-m-top_large">
+                <lightning-card title="My Personal Activities" icon-name="standard:event">
+                    <div class="slds-p-around_medium">
+                        <!-- Personal Activity 달력 컴포넌트가 들어갈 자리 -->
+                        <c-personal-activity-calendar></c-personal-activity-calendar>
+                    </div>
+                </lightning-card>
+            </div>
+
+            <!-- 비용 집계 요약 영역 -->
+            <div class="slds-m-top_large">
+                <lightning-card title="Cost Summary" icon-name="standard:money">
+                    <div class="slds-p-around_medium">
+                        <!-- 비용 집계 차트 또는 표가 들어갈 자리 -->
+                        <p>부서별, 비용 종류별 간략한 비용 현황이 여기에 표시될 예정입니다.</p>
+                    </div>
+                </lightning-card>
+            </div>
+        </div>
+    </lightning-card>
+</template>

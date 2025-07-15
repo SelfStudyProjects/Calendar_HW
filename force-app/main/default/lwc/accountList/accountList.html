@@ -1,0 +1,20 @@
+<template>
+    <lightning-card title="Account List" icon-name="standard:account">
+        <div class="slds-p-around_medium">
+            <template if:true={accounts}>
+                <lightning-datatable
+                    key-field="Id"
+                    data={accounts}
+                    columns={columns}
+                    hide-checkbox-column="true">
+                </lightning-datatable>
+            </template>
+            <template if:false={accounts}>
+                <p>No Account records found.</p>
+            </template>
+            <template if:true={error}>
+                <p style="color: red;">Error loading accounts: {error.body.message}</p>
+            </template>
+        </div>
+    </lightning-card>
+</template>
