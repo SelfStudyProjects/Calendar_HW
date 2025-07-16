@@ -1,3 +1,13 @@
 <template>
-    
+    <lightning-card title="My Calendar" icon-name="standard:event">
+        <div class="slds-p-around_medium">
+            <div class="fullcalendar-container">
+                <div lwc:dom="manual" class="fullcalendar"></div>
+            </div>
+        </div>
+    </lightning-card>
+
+    <template if:true={isModalOpen}>
+        <c-event-modal onclose={handleModalClose} onsave={handleEventSave} event-data={selectedEventData}></c-event-modal>
+    </template>
 </template>

@@ -7,9 +7,19 @@ public with sharing class EventController {
                 FROM Event
                 WHERE OwnerId = :currentUserId
                 ORDER BY StartDateTime ASC];
+    }
     @AuraEnabled
     public static Id saveEvent(Event newEvent) {
         upsert newEvent; // Id가 있으면 업데이트, 없으면 삽입
         return newEvent.Id;
+    }
+    // getPersonalActivities 메서드에서 WhatId와 Location도 가져오도록 수정
+    @AuraEnabled(cacheable=true)
+    public static List<Event> getPersonalActivities() {
+        Id currentUserId = UserInfo.getUserId();
+        return [SELECT Id, Subject, StartDateTime, EndDateTime, Location, WhatId, CostType__c, CostAmount__c
+                FROM Event
+                WHERE OwnerId = :currentUserId
+                ORDER BY StartDateTime ASC];
     }
 }
