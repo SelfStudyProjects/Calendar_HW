@@ -1,0 +1,391 @@
+.dashboard-tabs-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 300px;
+}:host {
+    display: block;
+    height: var(--component-height, 100%);
+}
+
+.main-dashboard-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-dashboard-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* 활동 아이콘 섹션 (personalActivityCalendar 스타일 적용) */
+.activity-icons-section {
+    flex-shrink: 0;
+    padding: 1rem;
+    border-bottom: 1px solid #d8dde6;
+    background-color: #f8f9fa;
+}
+
+.icon-group {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: grab;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.8em;
+    user-select: none;
+    background-color: #ffffff;
+    min-width: 70px;
+    position: relative;
+}
+
+.icon-item:hover {
+    border-color: #0070d2;
+    background-color: #f3f3f3;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.icon-item:active {
+    cursor: grabbing;
+}
+
+.icon-item[draggable="true"] {
+    cursor: grab;
+}
+
+.icon-item[draggable="true"]:active {
+    cursor: grabbing;
+    opacity: 0.7;
+}
+
+.icon-item img {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 5px;
+    pointer-events: none; /* 이미지 드래그 방지 */
+    user-drag: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.icon-item span {
+    font-weight: 500;
+    color: #333;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.dashboard-layout {
+    display: flex;
+    flex: 1;
+    gap: 1rem;
+    overflow: hidden;
+    padding: 1rem;
+}
+
+.dashboard-tabs-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 300px;
+}
+
+.dashboard-tabs-section lightning-tabset {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-content-scroll {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: 400px;
+}
+
+.tab-content-scroll > * {
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.data-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* 드래그 가능한 아이템 스타일 */
+.draggable-item {
+    cursor: grab;
+    transition: all 0.2s ease;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    background-color: #ffffff;
+}
+
+.draggable-item:hover {
+    border-color: #1b96ff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.draggable-item:active {
+    cursor: grabbing;
+}
+
+.draggable-item .slds-media {
+    align-items: center;
+}
+
+.draggable-item .slds-media__figure {
+    margin-right: 0.75rem;
+}
+
+/* 캘린더 섹션 스타일 */
+.calendar-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 400px;
+}
+
+.calendar-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-header {
+    margin-bottom: 1rem;
+}
+
+.calendar-grid {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    margin-bottom: 1px;
+}
+
+.weekday-header {
+    padding: 0.5rem;
+    text-align: center;
+    font-weight: bold;
+    background-color: #f3f3f3;
+    border: 1px solid #d8dde6;
+    font-size: 0.875rem;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 1px;
+    flex: 1;
+    min-height: 300px;
+}
+
+.calendar-day {
+    border: 1px solid #d8dde6;
+    padding: 0.5rem;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    min-height: 60px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.calendar-day:hover {
+    background-color: #f8fafe;
+}
+
+.calendar-day.other-month {
+    background-color: #fafafa;
+    color: #a8a8a8;
+}
+
+.calendar-day.today {
+    background-color: #e3f2fd;
+    border-color: #1976d2;
+}
+
+.calendar-day.drag-over {
+    background-color: #e8f4fd;
+    border-color: #1b96ff;
+    border-width: 2px;
+    border-style: dashed;
+    transform: scale(1.02);
+}
+
+.day-number {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.calendar-event {
+    display: flex;
+    align-items: center;
+    background-color: #1b96ff;
+    color: white;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.125rem;
+    margin-bottom: 0.125rem;
+    font-size: 0.75rem;
+    overflow: hidden;
+}
+
+.calendar-event lightning-icon {
+    margin-right: 0.25rem;
+    flex-shrink: 0;
+}
+
+.event-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 비용 집계 요약 영역 */
+.cost-summary-section {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.cost-summary-inner-card {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.cost-summary-content-scroll {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: 200px;
+}
+
+.cost-summary-content-scroll > * {
+    width: 100%;
+    flex-shrink: 0;
+}
+
+/* 모달 스타일 (EventModal과 동일) */
+.slds-modal {
+    z-index: 9000;
+}
+
+.slds-backdrop {
+    z-index: 8999;
+}
+
+.slds-modal__content {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.slds-form-element {
+    margin-bottom: 1rem;
+}
+
+.slds-form-element__label {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.slds-input, .slds-textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d8dde6;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.slds-input:focus, .slds-textarea:focus {
+    outline: none;
+    border-color: #1b96ff;
+    box-shadow: 0 0 0 2px rgba(27, 150, 255, 0.2);
+}
+
+.slds-textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* 드래그 상태 시각적 피드백 개선 */
+.icon-item.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.draggable-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+    .tabs-calendar-container {
+        flex-direction: column;
+    }
+    
+    .icon-group {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .icon-item {
+        min-width: 60px;
+    }
+    
+    .icon-item img {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .calendar-section {
+        min-width: unset;
+    }
+    
+    .dashboard-tabs-section {
+        min-width: unset;
+    }
+}
