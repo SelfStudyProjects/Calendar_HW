@@ -1,13 +1,35 @@
 <template>
-    <lightning-card title="My Calendar" icon-name="standard:event">
-        <div class="slds-p-around_medium">
-            <div class="fullcalendar-container">
-                <div lwc:dom="manual" class="fullcalendar"></div>
+    <div class="main-container">
+        <div class="icon-panel">
+            <div class="icon-group">
+                <div class="icon-item" draggable="true" data-type="vacation" title="휴가">
+                    <img src={vacationIconUrl} alt="휴가" />
+                    <span>vacation</span>
+                </div>
+                <div class="icon-item" draggable="true" data-type="sick" title="병가">
+                    <img src={sickIconUrl} alt="병가" />
+                    <span>sick</span>
+                </div>
+                <div class="icon-item" draggable="true" data-type="education" title="교육">
+                    <img src={educationIconUrl} alt="교육" />
+                    <span>education</span>
+                </div>
+                <div class="icon-item" draggable="true" data-type="business" title="출장">
+                    <img src={businessIconUrl} alt="출장" />
+                    <span>business</span>
+                </div>
             </div>
         </div>
-    </lightning-card>
 
-    <template if:true={isModalOpen}>
-        <c-event-modal onclose={handleModalClose} onsave={handleEventSave} event-data={selectedEventData}></c-event-modal>
-    </template>
+        <div class="calendar-panel">
+            <div class="full-calendar"></div>
+        </div>
+    </div>
+
+    <c-event-modal
+        if:true={showModal}
+        event-data={eventModalData}
+        onclosemodal={handleCloseModal}
+        oneventsaved={handleEventSaved}>
+    </c-event-modal>
 </template>
