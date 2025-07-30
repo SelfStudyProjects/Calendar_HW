@@ -1,215 +1,345 @@
-import { LightningElement, wire } from 'lwc';
+import { LightningElement } from 'lwc';
 import { loadScript, loadStyle } from 'lightning/platformResourceLoader';
-import FullCalendarJS from '@salesforce/resourceUrl/FullCalendarJS'; // Static Resource 이름
-import getPersonalActivities from '@salesforce/apex/EventController.getPersonalActivities';
-import saveEvent from '@salesforce/apex/EventController.saveEvent'; // 이벤트 저장 Apex 메서드
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+import FullCalendarRef from '@salesforce/resourceUrl/FullCalendar';
+import ActivityIcons from '@salesforce/resourceUrl/ActivityIcons';
+import getPersonalActivities from '@salesforce/apex/EventController.getPersonalActivities';
+import saveEvent from '@salesforce/apex/EventController.saveEvent';
+
 export default class PersonalActivityCalendar extends LightningElement {
-    fullCalendarInitialized = false;
-    calendar; // FullCalendar 인스턴스를 저장할 변수
-    isModalOpen = false; // 모달 열림/닫힘 상태
-    selectedEventData = {}; // 모달에 전달할 이벤트 데이터
+    calendarInitialized = false;
+    fullCalendarInstance;
+    isDragInitialized = false;
 
-    // Apex에서 가져온 이벤트를 FullCalendar 형식으로 변환하여 저장
-    wiredActivities = [];
+    showModal = false;
+    eventModalData = {};
 
-    @wire(getPersonalActivities)
-    wiredGetPersonalActivities({ error, data }) {
-        if (data) {
-            // Apex에서 가져온 Event 데이터를 FullCalendar 이벤트 형식으로 변환
-            this.wiredActivities = data.map(event => {
-                return {
-                    id: event.Id,
-                    title: event.Subject,
-                    start: event.StartDateTime,
-                    end: event.EndDateTime,
-                    allDay: false, // 필요에 따라 true/false 설정
-                    // 추가 데이터 (모달에서 사용)
-                    costType: event.CostType__c,
-                    costAmount: event.CostAmount__c
-                };
-            });
-            if (this.fullCalendarInitialized) {
-                this.calendar.removeAllEvents(); // 기존 이벤트 모두 제거
-                this.calendar.addEventSource(this.wiredActivities); // 새로운 이벤트 추가
-            }
-        } else if (error) {
-            this.error = error;
-            console.error('Error retrieving personal activities:', error);
-            this.showToast('Error', 'Failed to load activities.', 'error');
-        }
-    }
+    get vacationIconUrl() { return ActivityIcons + '/icons/vacation.png'; }
+    get sickIconUrl() { return ActivityIcons + '/icons/sick.png'; }
+    get educationIconUrl() { return ActivityIcons + '/icons/education.png'; }
+    get businessIconUrl() { return ActivityIcons + '/icons/business.png'; }
 
     renderedCallback() {
-        if (this.fullCalendarInitialized) {
+        if (this.calendarInitialized) {
             return;
         }
-        this.fullCalendarInitialized = true;
+        this.calendarInitialized = true;
 
-        // Static Resource 로드 (JS, CSS)
         Promise.all([
-            loadScript(this, FullCalendarJS + '/main.min.js'),
-            loadScript(this, FullCalendarJS + '/daygrid.min.js'),
-            loadScript(this, FullCalendarJS + '/timegrid.min.js'),
-            loadScript(this, FullCalendarJS + '/interaction.min.js'),
-            loadScript(this, FullCalendarJS + '/luxon.min.js'), // 날짜/시간 라이브러리
-            loadStyle(this, FullCalendarJS + '/main.min.css')
+            loadScript(this, FullCalendarRef + '/main.min.js'),
+            loadStyle(this, FullCalendarRef + '/main.min.css'),
         ])
         .then(() => {
             this.initializeCalendar();
+
+            if (!this.isDragInitialized) {
+                this.initializeDraggableIcons();
+                this.isDragInitialized = true;
+            }
         })
         .catch(error => {
-            console.error('Error loading FullCalendar:', error);
-            this.showToast('Error', 'Failed to load calendar library.', 'error');
+            this.showToast('오류', '달력 로드 중 오류 발생: ' + this.getErrorMessage(error), 'error');
         });
     }
 
+    initializeDraggableIcons() {
+        if (window.FullCalendar && window.FullCalendar.Draggable) {
+            const draggableEl = this.template.querySelector('.icon-group');
+            if (draggableEl) {
+                window.FullCalendar.Draggable(draggableEl, {
+                    itemSelector: '.icon-item',
+                    eventData: function(eventEl) {
+                        return {
+                            title: eventEl.dataset.type,
+                            create: true
+                        };
+                    }
+                });
+            } else {
+                /* No specific error needed, this is for debugging when element not found */
+            }
+        } else {
+            this.template.querySelectorAll('.icon-item').forEach(item => {
+                item.addEventListener('dragstart', event => {
+                    event.dataTransfer.setData('text/plain', event.currentTarget.dataset.type);
+                    event.dataTransfer.setData('text/fc-event', JSON.stringify({
+                        title: event.currentTarget.dataset.type
+                    }));
+                });
+            });
+        }
+    }
+
     initializeCalendar() {
-        const calendarEl = this.template.querySelector('.fullcalendar');
+        const calendarEl = this.template.querySelector('.full-calendar');
         if (calendarEl) {
-            this.calendar = new FullCalendar.Calendar(calendarEl, {
-                // 기본 설정
-                initialView: 'timeGridWeek', // 주별 시간 그리드 뷰 (일별 뷰로 변경 가능: 'timeGridDay')
+            let FullCalendarConstructor = null;
+
+            if (window.FullCalendar && window.FullCalendar.Calendar) {
+                FullCalendarConstructor = window.FullCalendar.Calendar;
+            } else if (FullCalendarRef.Calendar) {
+                FullCalendarConstructor = FullCalendarRef.Calendar;
+            }
+
+            if (!FullCalendarConstructor) {
+                this.showToast('오류', '달력 핵심 기능을 찾을 수 없습니다. 관리자에게 문의하세요.', 'error');
+                return;
+            }
+
+            this.fullCalendarInstance = new FullCalendarConstructor(calendarEl, {
+                initialView: 'dayGridMonth',
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay' // 월, 주, 일 뷰 버튼
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                events: this.wiredActivities, // Apex에서 가져온 이벤트 데이터
-                editable: true, // 이벤트 드래그 앤 드롭 및 크기 조절 가능
-                selectable: true, // 날짜/시간 범위 선택 가능
-                // 드래그 앤 드롭 및 크기 조절 콜백
-                eventDrop: this.handleEventDrop.bind(this), // 이벤트 드롭 시
-                eventResize: this.handleEventResize.bind(this), // 이벤트 크기 조절 시
-                select: this.handleDateSelect.bind(this), // 날짜/시간 범위 선택 시 (새 일정 생성)
-                eventClick: this.handleEventClick.bind(this), // 기존 이벤트 클릭 시 (편집)
-                // 기타 설정
-                slotMinTime: '08:00:00', // 달력 시작 시간
-                slotMaxTime: '20:00:00', // 달력 종료 시간
-                nowIndicator: true, // 현재 시간 표시
-                navLinks: true, // 날짜 클릭 시 해당 날짜 뷰로 이동
-                locale: 'ko', // 한국어 로케일 설정
-                timeZone: 'Asia/Seoul' // 시간대 설정 (필요시)
+                editable: true,
+                selectable: true,
+                navLinks: true,
+                initialDate: new Date(),
+                events: this.fetchEventsAsFullCalendarEvents.bind(this),
+                eventClick: this.handleEventClick.bind(this),
+                select: this.handleSelect.bind(this),
+                eventDrop: this.handleEventDrop.bind(this),
+                eventResize: this.handleEventResize.bind(this),
+
+                droppable: true,
+                drop: this.handleExternalDrop.bind(this),
+
+                eventContent: this.renderEventContent.bind(this),
             });
-            this.calendar.render();
+            this.fullCalendarInstance.render();
         }
     }
 
-    // --- FullCalendar 이벤트 핸들러 ---
-    handleEventDrop(info) { // 기존 이벤트 드래그 앤 드롭 시
-        const event = info.event;
-        this.saveCalendarEvent(event);
-    }
+    fetchEventsAsFullCalendarEvents(fetchInfo, successCallback, failureCallback) {
+        const idRegex = /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/;
 
-    handleEventResize(info) { // 기존 이벤트 크기 조절 시
-        const event = info.event;
-        this.saveCalendarEvent(event);
-    }
+        getPersonalActivities()
+            .then(result => {
+                const formattedEvents = result.map(eventItem => {
+                    let validWhatId = eventItem.WhatId;
+                    if (validWhatId && !idRegex.test(validWhatId)) {
+                        validWhatId = null;
+                    }
 
-    handleDateSelect(info) { // 날짜/시간 범위 선택 시 (새 일정 생성)
-        const startDate = info.startStr;
-        const endDate = info.endStr;
-        const allDay = info.allDay;
+                    let validWhoId = eventItem.WhoId;
+                    if (validWhoId && !idRegex.test(validWhoId)) {
+                        validWhoId = null;
+                    }
 
-        this.selectedEventData = {
-            id: null, // 새 이벤트이므로 ID 없음
-            title: '',
-            start: startDate,
-            end: endDate,
-            allDay: allDay,
-            location: '', // location 초기화 추가
-            whatId: null, // WhatId 초기화 추가 (새 이벤트 생성 시)
-            costType: null,
-            costAmount: null
-        };
-        this.isModalOpen = true; // 모달 열기
-        this.calendar.unselect(); // 선택 영역 해제
-    }
-
-    handleEventClick(info) { // 기존 이벤트 클릭 시 (편집)
-        const event = info.event;
-        this.selectedEventData = {
-            id: event.id,
-            title: event.title,
-            start: event.startStr,
-            end: event.endStr,
-            allDay: event.allDay,
-            location: event.extendedProps.location, // extendedProps에서 가져옴
-            whatId: event.extendedProps.whatId, // extendedProps에서 가져옴
-            costType: event.extendedProps.costType, // extendedProps에서 가져옴
-            costAmount: event.extendedProps.costAmount // extendedProps에서 가져옴
-        };
-        this.isModalOpen = true; // 모달 열기
-    }
-
-    // --- 모달 관련 핸들러 ---
-    handleModalClose() {
-        this.isModalOpen = false;
-        this.selectedEventData = {};
-    }
-
-    async handleEventSave(event) {
-        const savedEventData = event.detail.eventData;
-        this.isModalOpen = false; // 모달 닫기
-
-        try {
-            // Apex saveEvent 메서드 호출
-            const newEventId = await saveEvent({
-                newEvent: {
-                    Id: savedEventData.id, // 기존 이벤트면 ID, 새 이벤트면 null
-                    Subject: savedEventData.title,
-                    StartDateTime: savedEventData.start,
-                    EndDateTime: savedEventData.end,
-                    IsAllDayEvent: savedEventData.allDay,
-                    Location: savedEventData.location, // Location 필드 추가
-                    WhatId: savedEventData.whatId, // WhatId 필드 추가
-                    CostType__c: savedEventData.costType,
-                    CostAmount__c: savedEventData.costAmount
-                }
-            });
-
-            // FullCalendar 업데이트 (새 이벤트 추가 또는 기존 이벤트 업데이트)
-            if (savedEventData.id) {
-                // 기존 이벤트 업데이트
-                const fcEvent = this.calendar.getEventById(savedEventData.id);
-                if (fcEvent) {
-                    fcEvent.setProp('title', savedEventData.title);
-                    fcEvent.setDates(savedEventData.start, savedEventData.end, { allDay: savedEventData.allDay });
-                    fcEvent.setExtendedProp('costType', savedEventData.costType);
-                    fcEvent.setExtendedProp('costAmount', savedEventData.costAmount);
-                    sfcEvent.setExtendedProp('location', savedEventData.location);
-                    fcEvent.setExtendedProp('whatId', savedEventData.whatId);
-                }
-            } else {
-                // 새 이벤트 추가
-                this.calendar.addEvent({
-                    id: newEventId, // 새로 생성된 ID 사용
-                    title: savedEventData.title,
-                    start: savedEventData.start,
-                    end: savedEventData.end,
-                    allDay: savedEventData.allDay,
-                    location: savedEventData.location,
-                    whatId: savedEventData.whatId,
-                    costType: savedEventData.costType,
-                    costAmount: savedEventData.costAmount
+                    return {
+                        id: eventItem.Id,
+                        title: eventItem.Subject,
+                        start: eventItem.StartDateTime,
+                        end: eventItem.EndDateTime,
+                        allDay: false,
+                        extendedProps: {
+                            Location: eventItem.Location,
+                            WhatId: validWhatId,
+                            WhoId: validWhoId,
+                            Cost_Type__c: eventItem.Cost_Type__c,
+                            Cost_Amount__c: eventItem.Cost_Amount__c,
+                            IconType: eventItem.IconType__c
+                        }
+                    }
                 });
-            }
-            this.showToast('Success', 'Event saved successfully!', 'success');
-            // Apex에서 Event 데이터를 다시 가져와서 달력을 새로고침하는 방법도 고려 (더 확실)
-            // refreshApex(this.wiredGetPersonalActivities);
+                successCallback(formattedEvents);
+            })
+            .catch(error => {
+                failureCallback(error);
+                this.showToast('오류', '활동을 불러오지 못했습니다: ' + this.getErrorMessage(error), 'error');
+            });
+    }
 
-        } catch (error) {
-            console.error('Error saving event:', error);
-            this.showToast('Error', 'Failed to save event.', 'error');
+    handleExternalDrop(info) {
+        const droppedEventType = info.event ? info.event.title : (info.draggedEl ? info.draggedEl.dataset.type : (info.data ? info.data.get('text/plain') : ''));
+        const dropDate = info.date;
+
+        let defaultSubject = droppedEventType ? `${droppedEventType} 일정` : '새로운 일정';
+
+        this.eventModalData = {
+            Subject: defaultSubject,
+            StartDateTime: dropDate.toISOString(),
+            EndDateTime: dropDate.toISOString(),
+            isNew: true,
+            IconType__c: droppedEventType,
+            WhatId: '',
+            WhoId: ''
+        };
+        this.showModal = true;
+        if (this.fullCalendarInstance) {
+            this.fullCalendarInstance.unselect();
         }
+    }
+
+    handleSelect(info) {
+        this.eventModalData = {
+            Subject: '새로운 일정',
+            StartDateTime: info.startStr,
+            EndDateTime: info.endStr,
+            isNew: true,
+            IconType__c: '',
+            WhatId: '',
+            WhoId: ''
+        };
+        this.showModal = true;
+        this.fullCalendarInstance.unselect();
+    }
+
+    handleEventClick(info) {
+        const eventItem = info.event;
+        const idRegex = /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/;
+        let clickedWhatId = eventItem.extendedProps.WhatId;
+        if (clickedWhatId && !idRegex.test(clickedWhatId)) clickedWhatId = '';
+        let clickedWhoId = eventItem.extendedProps.WhoId;
+        if (clickedWhoId && !idRegex.test(clickedWhoId)) clickedWhoId = '';
+
+        this.eventModalData = {
+            Id: eventItem.id,
+            Subject: eventItem.title,
+            StartDateTime: eventItem.startStr,
+            EndDateTime: eventItem.endStr,
+            Location: eventItem.extendedProps.Location,
+            WhatId: clickedWhatId,
+            WhoId: clickedWhoId,
+            Cost_Type__c: eventItem.extendedProps.Cost_Type__c,
+            Cost_Amount__c: eventItem.extendedProps.Cost_Amount__c,
+            isNew: false,
+        };
+        this.showModal = true;
+    }
+
+    handleEventDrop(info) {
+        const eventItem = info.event;
+        const idRegex = /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/;
+        let droppedWhatId = eventItem.extendedProps.WhatId;
+        if (droppedWhatId && !idRegex.test(droppedWhatId)) droppedWhatId = null;
+        let droppedWhoId = eventItem.extendedProps.WhoId;
+        if (droppedWhoId && !idRegex.test(droppedWhoId)) droppedWhoId = null;
+
+        const updatedEvent = {
+            Id: eventItem.id,
+            Subject: eventItem.title,
+            StartDateTime: eventItem.startStr,
+            EndDateTime: eventItem.endStr,
+            Location: eventItem.extendedProps.Location,
+            WhatId: droppedWhatId,
+            WhoId: droppedWhoId,
+            Cost_Type__c: eventItem.extendedProps.Cost_Type__c,
+            Cost_Amount__c: eventItem.extendedProps.Cost_Amount__c,
+            IconType__c: eventItem.extendedProps.IconType__c
+        };
+        this.saveEventData(updatedEvent, '일정을 성공적으로 이동했습니다.');
+    }
+
+    handleEventResize(info) {
+        const eventItem = info.event;
+        const idRegex = /^[a-zA-Z0-9]{15}$|^[a-zA-Z0-9]{18}$/;
+        let resizedWhatId = eventItem.extendedProps.WhatId;
+        if (resizedWhatId && !idRegex.test(resizedWhatId)) resizedWhatId = null;
+        let resizedWhoId = eventItem.extendedProps.WhoId;
+        if (resizedWhoId && !idRegex.test(resizedWhoId)) resizedWhoId = null;
+
+        const updatedEvent = {
+            Id: eventItem.id,
+            Subject: eventItem.title,
+            StartDateTime: eventItem.startStr,
+            EndDateTime: eventItem.endStr,
+            Location: eventItem.extendedProps.Location,
+            WhatId: resizedWhatId,
+            WhoId: resizedWhoId,
+            Cost_Type__c: eventItem.extendedProps.Cost_Type__c,
+            Cost_Amount__c: eventItem.extendedProps.Cost_Amount__c,
+            IconType__c: eventItem.extendedProps.IconType__c
+        };
+        this.saveEventData(updatedEvent, '일정 기간을 성공적으로 변경했습니다.');
+    }
+
+    saveEventData(eventToSave, successMessage) {
+        if (eventToSave === null) {
+            this.showToast('오류', '저장할 데이터가 유효하지 않습니다.', 'error');
+            return;
+        }
+
+        saveEvent({ eventJsonString: JSON.stringify(eventToSave) })
+            .then(() => {
+                this.showToast('성공', successMessage || '일정이 성공적으로 저장되었습니다!', 'success');
+                if (this.fullCalendarInstance) {
+                    this.fullCalendarInstance.refetchEvents();
+                }
+            })
+            .catch(error => {
+                this.showToast('오류', '일정 저장/수정 중 오류가 발생했습니다: ' + this.getErrorMessage(error), 'error');
+            });
+    }
+
+    handleEventSaved() {
+        this.showModal = false;
+        if (this.fullCalendarInstance) {
+            this.fullCalendarInstance.refetchEvents();
+        }
+        this.showToast('성공', '일정이 성공적으로 저장되었습니다!', 'success');
+    }
+
+    handleCloseModal() {
+        this.showModal = false;
     }
 
     showToast(title, message, variant) {
         const event = new ShowToastEvent({
             title: title,
             message: message,
-            variant: variant
+            variant: variant,
         });
         this.dispatchEvent(event);
+    }
+
+    getErrorMessage(error) {
+        if (error && error.body && error.body.message) {
+            return error.body.message;
+        } else if (typeof error === 'string') {
+            return error;
+        }
+        return '알 수 없는 오류';
+    }
+
+    renderEventContent(info) {
+        let contentEl = document.createElement('div');
+        contentEl.classList.add('fc-event-main-content');
+
+        let eventIconType = info.event.extendedProps.IconType__c;
+        if (!eventIconType && info.event.title) {
+            if (info.event.title.includes('휴가')) eventIconType = 'vacation';
+            else if (info.event.title.includes('병가')) eventIconType = 'sick';
+            else if (info.event.title.includes('교육')) eventIconType = 'education';
+            else if (info.event.title.includes('출장')) eventIconType = 'business';
+            else eventIconType = info.event.title.toLowerCase();
+        }
+
+        if (eventIconType) {
+            const iconMapping = {
+                'vacation': this.vacationIconUrl,
+                'sick': this.sickIconUrl,
+                'education': this.educationIconUrl,
+                'business': this.businessIconUrl,
+            };
+            const iconUrl = iconMapping[eventIconType.toLowerCase()];
+
+            if (iconUrl) {
+                let iconEl = document.createElement('img');
+                iconEl.src = iconUrl;
+                iconEl.alt = eventIconType;
+                iconEl.classList.add('event-icon');
+                contentEl.prepend(iconEl);
+            }
+        }
+
+        let titleEl = document.createElement('span');
+        titleEl.innerText = info.event.title;
+        titleEl.classList.add('fc-event-title');
+        contentEl.appendChild(titleEl);
+
+        return { domNodes: [contentEl] };
     }
 }
